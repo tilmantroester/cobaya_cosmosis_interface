@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cosmosis-cobaya-interface"
+version = "0.0.1"
+authors = [
+    {name = "Tilman Tröster", email = "tilman@troester.space"},
+]
+description = "A cobaya likelihood to run cosmosis pipelines"
+dependencies = [
+   #"cobaya",
+   #"numpy"
+]
