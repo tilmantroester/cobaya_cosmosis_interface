@@ -4,7 +4,7 @@ from cobaya import Likelihood
 
 from cosmosis.runtime.config import Inifile
 from cosmosis.runtime.pipeline import Pipeline
-from cosmosis.datablock.cosmosis_py import block, section_names
+from cosmosis.datablock.cosmosis_py import block, section_names, errors
 
 
 class CosmoSISWrapperLikelihood(Likelihood):
@@ -12,6 +12,7 @@ class CosmoSISWrapperLikelihood(Likelihood):
     remove_modules: list[str] = []
     use_cobaya_theory: bool = True
     dump_datablock_path: str | None = None
+    cosmosis_quiet: bool = True
 
     kmin_extrapolate: float = 1e-5
     kmax: float = 10.0
@@ -31,8 +32,8 @@ class CosmoSISWrapperLikelihood(Likelihood):
 
     def initialize(self):
         ini = Inifile(filename=self.ini_file)
-        ini.set("pipeline", "quiet", "T")
-        ini.set("pipeline", "timing", "F")
+        ini.set("pipeline", "quiet", "T" if self.cosmosis_quiet else "F")
+        ini.set("pipeline", "timing", "T")
 
         modules = ini.get("pipeline", "modules")
         modules = modules.strip().split(" ")
@@ -100,8 +101,6 @@ class CosmoSISWrapperLikelihood(Likelihood):
             if "." in name:
                 section, key = name.split(".")
                 data[section, key] = value
-            # elif "_derived" not in name:
-            #     data[section_names.cosmological_parameters, name] = value
 
         if self.use_cobaya_theory:
             h = params["H0"] / 100
@@ -154,6 +153,16 @@ class CosmoSISWrapperLikelihood(Likelihood):
         # data[section_names.growth_parameters, ""] = None
 
         self.pipeline.run(data)
+
+        # Get derived parameters from datablock and put them in
+        # the _derived dict
+        for derived_param_name in self.output_params:
+            section, key = derived_param_name.split(".")
+            try:
+                value = data[section, key]
+            except errors.BlockNameNotFound:
+                value = float("nan")
+            params["_derived"][derived_param_name] = value
 
         if self.dump_datablock_path is not None:
             data.save_to_directory(self.dump_datablock_path)
